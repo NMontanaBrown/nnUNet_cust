@@ -1,10 +1,10 @@
 from setuptools import setup, find_namespace_packages
 
-setup(name='nnunet',
+setup(name='nnunet_customized',
       packages=find_namespace_packages(include=["nnunet", "nnunet.*"]),
       version='1.6.6',
       description='nnU-Net. Framework for out-of-the box biomedical image segmentation.',
-      url='https://github.com/MIC-DKFZ/nnUNet',
+      url='https://github.com/wasserth/nnUNet_cust',
       author='Division of Medical Image Computing, German Cancer Research Center',
       author_email='f.isensee@dkfz-heidelberg.de',
       license='Apache License Version 2.0, January 2004',
