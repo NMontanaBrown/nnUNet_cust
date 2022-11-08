@@ -24,8 +24,17 @@ def maybe_to_torch(d):
 
 
 def to_cuda(data, non_blocking=True, gpu_id=0):
-    if isinstance(data, list):
-        data = [i.cuda(gpu_id, non_blocking=non_blocking) for i in data]
+    if torch.cuda.is_available():
+        if isinstance(data, list):
+            data = [i.cuda(gpu_id, non_blocking=non_blocking) for i in data]
+        else:
+            data = data.cuda(gpu_id, non_blocking=non_blocking)
+        return data
     else:
-        data = data.cuda(gpu_id, non_blocking=non_blocking)
-    return data
+        # print("### Running on CPU")
+        # print(f"## nr of threads: {torch.get_num_threads()}")
+        if isinstance(data, list):
+            data = [i.cpu() for i in data]
+        else:
+            data = data.cpu()
+        return data

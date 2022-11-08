@@ -294,7 +294,7 @@ class SegmentationNetwork(NeuralNetwork):
                                           verbose: bool) -> Tuple[np.ndarray, np.ndarray]:
         # better safe than sorry
         assert len(x.shape) == 4, "x must be (c, x, y, z)"
-        assert self.get_device() != "cpu"
+        # assert self.get_device() != "cpu"
         if verbose: print("step_size:", step_size)
         if verbose: print("do mirror:", do_mirroring)
 
@@ -329,8 +329,8 @@ class SegmentationNetwork(NeuralNetwork):
                 if verbose: print("using precomputed Gaussian")
                 gaussian_importance_map = self._gaussian_3d
 
-            gaussian_importance_map = torch.from_numpy(gaussian_importance_map).cuda(self.get_device(),
-                                                                                     non_blocking=True)
+            gaussian_importance_map = torch.from_numpy(gaussian_importance_map)  #.cuda(self.get_device(), non_blocking=True)
+            gaussian_importance_map = to_cuda(gaussian_importance_map, gpu_id=self.get_device())
 
         else:
             gaussian_importance_map = None
@@ -357,7 +357,8 @@ class SegmentationNetwork(NeuralNetwork):
                                              device=self.get_device())
 
             if verbose: print("moving data to GPU")
-            data = torch.from_numpy(data).cuda(self.get_device(), non_blocking=True)
+            data = torch.from_numpy(data)  #.cuda(self.get_device(), non_blocking=True)
+            data = to_cuda(data, gpu_id=self.get_device())
 
             if verbose: print("initializing result_numsamples (on GPU)")
             aggregated_nb_of_predictions = torch.zeros([self.num_classes] + list(data.shape[1:]), dtype=torch.half,
@@ -505,7 +506,10 @@ class SegmentationNetwork(NeuralNetwork):
 
         x = to_cuda(maybe_to_torch(x), gpu_id=self.get_device())
         result_torch = torch.zeros([1, self.num_classes] + list(x.shape[2:]),
-                                   dtype=torch.float).cuda(self.get_device(), non_blocking=True)
+                                   dtype=torch.float)  #.cuda(self.get_device(), non_blocking=True)
+        result_torch = to_cuda(result_torch, gpu_id=self.get_device())
+                                    
+        
 
         if mult is not None:
             mult = to_cuda(maybe_to_torch(mult), gpu_id=self.get_device())
@@ -564,7 +568,8 @@ class SegmentationNetwork(NeuralNetwork):
 
         x = to_cuda(maybe_to_torch(x), gpu_id=self.get_device())
         result_torch = torch.zeros([x.shape[0], self.num_classes] + list(x.shape[2:]),
-                                   dtype=torch.float).cuda(self.get_device(), non_blocking=True)
+                                   dtype=torch.float)  #.cuda(self.get_device(), non_blocking=True)
+        result_torch = to_cuda(result_torch, gpu_id=self.get_device())
 
         if mult is not None:
             mult = to_cuda(maybe_to_torch(mult), gpu_id=self.get_device())
@@ -639,8 +644,8 @@ class SegmentationNetwork(NeuralNetwork):
                 if verbose: print("using precomputed Gaussian")
                 gaussian_importance_map = self._gaussian_2d
 
-            gaussian_importance_map = torch.from_numpy(gaussian_importance_map).cuda(self.get_device(),
-                                                                                     non_blocking=True)
+            gaussian_importance_map = torch.from_numpy(gaussian_importance_map)  #.cuda(self.get_device(), non_blocking=True)
+            gaussian_importance_map = to_cuda(gaussian_importance_map, gpu_id=self.get_device())
         else:
             gaussian_importance_map = None
 
@@ -666,7 +671,8 @@ class SegmentationNetwork(NeuralNetwork):
                                              device=self.get_device())
 
             if verbose: print("moving data to GPU")
-            data = torch.from_numpy(data).cuda(self.get_device(), non_blocking=True)
+            data = torch.from_numpy(data)  #.cuda(self.get_device(), non_blocking=True)
+            data = to_cuda(data, gpu_id=self.get_device())
 
             if verbose: print("initializing result_numsamples (on GPU)")
             aggregated_nb_of_predictions = torch.zeros([self.num_classes] + list(data.shape[1:]), dtype=torch.half,
