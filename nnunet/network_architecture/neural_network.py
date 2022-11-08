@@ -115,7 +115,7 @@ class SegmentationNetwork(NeuralNetwork):
 
         if verbose: print("debug: mirroring", do_mirroring, "mirror_axes", mirror_axes)
 
-        assert self.get_device() != "cpu", "CPU not implemented"
+        # assert self.get_device() != "cpu", "CPU not implemented"
 
         if pad_kwargs is None:
             pad_kwargs = {'constant_values': 0}
@@ -210,7 +210,7 @@ class SegmentationNetwork(NeuralNetwork):
 
         if verbose: print("debug: mirroring", do_mirroring, "mirror_axes", mirror_axes)
 
-        assert self.get_device() != "cpu", "CPU not implemented"
+        # assert self.get_device() != "cpu", "CPU not implemented"
 
         if pad_kwargs is None:
             pad_kwargs = {'constant_values': 0}
@@ -433,7 +433,7 @@ class SegmentationNetwork(NeuralNetwork):
         This one does fully convolutional inference. No sliding window
         """
         assert len(x.shape) == 3, "x must be (c, x, y)"
-        assert self.get_device() != "cpu"
+        # assert self.get_device() != "cpu"
         assert self.input_shape_must_be_divisible_by is not None, 'input_shape_must_be_divisible_by must be set to ' \
                                                                   'run _internal_predict_2D_2Dconv'
         if verbose: print("do mirror:", do_mirroring)
@@ -469,7 +469,7 @@ class SegmentationNetwork(NeuralNetwork):
         This one does fully convolutional inference. No sliding window
         """
         assert len(x.shape) == 4, "x must be (c, x, y, z)"
-        assert self.get_device() != "cpu"
+        # assert self.get_device() != "cpu"
         assert self.input_shape_must_be_divisible_by is not None, 'input_shape_must_be_divisible_by must be set to ' \
                                                                   'run _internal_predict_3D_3Dconv'
         if verbose: print("do mirror:", do_mirroring)
@@ -609,7 +609,7 @@ class SegmentationNetwork(NeuralNetwork):
                                           verbose: bool) -> Tuple[np.ndarray, np.ndarray]:
         # better safe than sorry
         assert len(x.shape) == 3, "x must be (c, x, y)"
-        assert self.get_device() != "cpu"
+        # assert self.get_device() != "cpu"
         if verbose: print("step_size:", step_size)
         if verbose: print("do mirror:", do_mirroring)
 
