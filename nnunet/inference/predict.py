@@ -601,6 +601,11 @@ def predict_from_folder(model: str, input_folder: str, output_folder: str, folds
     :param overwrite_existing: if not None then it will be overwritten with whatever is in there. None is default (no overwrite)
     :return:
     """
+    if not torch.cuda.is_available():
+        print("CPU mode. Setting num of threads to 8.")
+        # Only working if also doing "export OMP_NUM_THREADS=8"
+        torch.set_num_threads(8)  # 20 not faster than 8
+
     maybe_mkdir_p(output_folder)
     shutil.copy(join(model, 'plans.pkl'), output_folder)
 
