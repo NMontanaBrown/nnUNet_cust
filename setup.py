@@ -3,7 +3,7 @@ from setuptools import setup, find_namespace_packages
 setup(name='nnunet_customized',
       packages=find_namespace_packages(include=["nnunet", "nnunet.*"]),
     #   version='1.6.6',  # original nnunet version
-      version='1.1',  # nnunet_customized version
+      version='1.2',  # nnunet_customized version
       description='nnU-Net. Framework for out-of-the box biomedical image segmentation.',
       url='https://github.com/wasserth/nnUNet_cust',
       author='Division of Medical Image Computing, German Cancer Research Center',
