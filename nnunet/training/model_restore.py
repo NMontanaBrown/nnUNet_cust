@@ -144,7 +144,11 @@ def load_model_and_checkpoint_files(folder, folds=None, mixed_precision=None, ch
     trainer.initialize(False)
     all_best_model_files = [join(i, "%s.model" % checkpoint_name) for i in folds]
     print("using the following model files: ", all_best_model_files)
-    all_params = [torch.load(i, map_location=torch.device('cpu'), weights_only=False) for i in all_best_model_files]
+    if torch.backends.mps.is_available():
+        device = torch.device('mps')
+    else:
+        device = torch.device('cpu')
+    all_params = [torch.load(i, map_location=device, weights_only=False) for i in all_best_model_files]
     return trainer, all_params
 
 

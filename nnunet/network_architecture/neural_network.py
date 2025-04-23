@@ -38,6 +38,8 @@ class NeuralNetwork(nn.Module):
     def set_device(self, device):
         if device == "cpu":
             self.cpu()
+        elif torch.backends.mps.is_available():
+            self.to('mps')
         else:
             self.cuda(device)
 
@@ -108,7 +110,14 @@ class SegmentationNetwork(NeuralNetwork):
         :param mixed_precision: if True, will run inference in mixed precision with autocast()
         :return:
         """
-        torch.cuda.empty_cache()
+        # Clear memory cache for the appropriate device
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        elif torch.backends.mps.is_available():
+            # MPS doesn't have an explicit empty_cache method, but we can try to free memory
+            import gc
+            gc.collect()
+            torch.mps.empty_cache()
 
         assert step_size <= 1, 'step_size must be smaller than 1. Otherwise there will be a gap between consecutive ' \
                                'predictions'
@@ -133,8 +142,14 @@ class SegmentationNetwork(NeuralNetwork):
 
         assert len(x.shape) == 4, "data must have shape (c,x,y,z)"
 
+        # Use appropriate autocast context based on available device
         if mixed_precision:
-            context = autocast
+            if torch.cuda.is_available():
+                context = lambda: torch.amp.autocast(device_type='cuda')
+            elif torch.backends.mps.is_available():
+                context = lambda: torch.amp.autocast(device_type='mps')
+            else:
+                context = lambda: torch.amp.autocast(device_type='cpu')
         else:
             context = no_op
 
@@ -291,6 +306,10 @@ class SegmentationNetwork(NeuralNetwork):
         # better safe than sorry
         assert len(x.shape) == 4, "x must be (c, x, y, z)"
 
+        # Check for available device (CUDA or MPS)
+        device = self.get_device()
+        use_gpu = torch.cuda.is_available() or torch.backends.mps.is_available()
+        
         if verbose: print("step_size:", step_size)
         if verbose: print("do mirror:", do_mirroring)
 
@@ -328,9 +347,8 @@ class SegmentationNetwork(NeuralNetwork):
 
             gaussian_importance_map = torch.from_numpy(gaussian_importance_map)
 
-            #predict on cpu if cuda not available
-            if torch.cuda.is_available():
-                gaussian_importance_map = gaussian_importance_map.cuda(self.get_device(), non_blocking=True)
+            if use_gpu:
+                gaussian_importance_map = gaussian_importance_map.to(device, non_blocking=True)
 
         else:
             gaussian_importance_map = None
@@ -350,18 +368,18 @@ class SegmentationNetwork(NeuralNetwork):
 
                 add_for_nb_of_preds = gaussian_importance_map
             else:
-                add_for_nb_of_preds = torch.ones(patch_size, device=self.get_device())
+                add_for_nb_of_preds = torch.ones(patch_size, device=device)
 
             if verbose: print("initializing result array (on GPU)")
             aggregated_results = torch.zeros([self.num_classes] + list(data.shape[1:]), dtype=torch.half,
-                                             device=self.get_device())
+                                             device=device)
 
             if verbose: print("moving data to GPU")
-            data = torch.from_numpy(data).cuda(self.get_device(), non_blocking=True)
+            data = torch.from_numpy(data).to(device, non_blocking=True)
 
             if verbose: print("initializing result_numsamples (on GPU)")
             aggregated_nb_of_predictions = torch.zeros([self.num_classes] + list(data.shape[1:]), dtype=torch.half,
-                                                       device=self.get_device())
+                                                       device=device)
 
         else:
             if use_gaussian and num_tiles > 1:
@@ -503,22 +521,22 @@ class SegmentationNetwork(NeuralNetwork):
                                            mult: np.ndarray or torch.tensor = None) -> torch.tensor:
         assert len(x.shape) == 5, 'x must be (b, c, x, y, z)'
 
-        # if cuda available:
-        #   everything in here takes place on the GPU. If x and mult are not yet on GPU this will be taken care of here
-        #   we now return a cuda tensor! Not numpy array!
+        # Check for available device (CUDA or MPS)
+        device = self.get_device()
+        use_gpu = torch.cuda.is_available() or torch.backends.mps.is_available()
 
         x = maybe_to_torch(x)
         result_torch = torch.zeros([1, self.num_classes] + list(x.shape[2:]),
                                    dtype=torch.float)
 
-        if torch.cuda.is_available():
-            x = to_cuda(x, gpu_id=self.get_device())
-            result_torch = result_torch.cuda(self.get_device(), non_blocking=True)
+        if use_gpu:
+            x = to_cuda(x, gpu_id=device)
+            result_torch = result_torch.to(device, non_blocking=True)
 
         if mult is not None:
             mult = maybe_to_torch(mult)
-            if torch.cuda.is_available():
-                mult = to_cuda(mult, gpu_id=self.get_device())
+            if use_gpu:
+                mult = to_cuda(mult, gpu_id=device)
 
         if do_mirroring:
             mirror_idx = 8
@@ -568,23 +586,23 @@ class SegmentationNetwork(NeuralNetwork):
     def _internal_maybe_mirror_and_pred_2D(self, x: Union[np.ndarray, torch.tensor], mirror_axes: tuple,
                                            do_mirroring: bool = True,
                                            mult: np.ndarray or torch.tensor = None) -> torch.tensor:
-        # if cuda available:
-        #   everything in here takes place on the GPU. If x and mult are not yet on GPU this will be taken care of here
-        #   we now return a cuda tensor! Not numpy array!
+        # Check for available device (CUDA or MPS)
+        device = self.get_device()
+        use_gpu = torch.cuda.is_available() or torch.backends.mps.is_available()
 
         assert len(x.shape) == 4, 'x must be (b, c, x, y)'
 
         x = maybe_to_torch(x)
         result_torch = torch.zeros([x.shape[0], self.num_classes] + list(x.shape[2:]), dtype=torch.float)
 
-        if torch.cuda.is_available():
-            x = to_cuda(x, gpu_id=self.get_device())
-            result_torch = result_torch.cuda(self.get_device(), non_blocking=True)
+        if use_gpu:
+            x = to_cuda(x, gpu_id=device)
+            result_torch = result_torch.to(device, non_blocking=True)
 
         if mult is not None:
             mult = maybe_to_torch(mult)
-            if torch.cuda.is_available():
-                mult = to_cuda(mult, gpu_id=self.get_device())
+            if use_gpu:
+                mult = to_cuda(mult, gpu_id=device)
 
         if do_mirroring:
             mirror_idx = 4
@@ -622,6 +640,10 @@ class SegmentationNetwork(NeuralNetwork):
         # better safe than sorry
         assert len(x.shape) == 3, "x must be (c, x, y)"
 
+        # Check for available device (CUDA or MPS)
+        device = self.get_device()
+        use_gpu = torch.cuda.is_available() or torch.backends.mps.is_available()
+        
         if verbose: print("step_size:", step_size)
         if verbose: print("do mirror:", do_mirroring)
 
@@ -657,8 +679,8 @@ class SegmentationNetwork(NeuralNetwork):
                 gaussian_importance_map = self._gaussian_2d
 
             gaussian_importance_map = torch.from_numpy(gaussian_importance_map)
-            if torch.cuda.is_available():
-                gaussian_importance_map = gaussian_importance_map.cuda(self.get_device(), non_blocking=True)
+            if use_gpu:
+                gaussian_importance_map = gaussian_importance_map.to(device, non_blocking=True)
 
         else:
             gaussian_importance_map = None
@@ -678,18 +700,18 @@ class SegmentationNetwork(NeuralNetwork):
 
                 add_for_nb_of_preds = gaussian_importance_map
             else:
-                add_for_nb_of_preds = torch.ones(patch_size, device=self.get_device())
+                add_for_nb_of_preds = torch.ones(patch_size, device=device)
 
             if verbose: print("initializing result array (on GPU)")
             aggregated_results = torch.zeros([self.num_classes] + list(data.shape[1:]), dtype=torch.half,
-                                             device=self.get_device())
+                                             device=device)
 
             if verbose: print("moving data to GPU")
-            data = torch.from_numpy(data).cuda(self.get_device(), non_blocking=True)
+            data = torch.from_numpy(data).to(device, non_blocking=True)
 
             if verbose: print("initializing result_numsamples (on GPU)")
             aggregated_nb_of_predictions = torch.zeros([self.num_classes] + list(data.shape[1:]), dtype=torch.half,
-                                                       device=self.get_device())
+                                                       device=device)
         else:
             if use_gaussian and num_tiles > 1:
                 add_for_nb_of_preds = self._gaussian_2d

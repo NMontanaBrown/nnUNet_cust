@@ -261,6 +261,8 @@ class nnUNetTrainer(NetworkTrainer):
 
         if torch.cuda.is_available():
             self.network.cuda()
+        elif torch.backends.mps.is_available():
+            self.network.to('mps')
 
     def initialize_optimizer_and_scheduler(self):
         assert self.network is not None, "self.initialize_network must be called first"
