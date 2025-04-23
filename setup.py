@@ -24,41 +24,47 @@ class InstallCustomTorch(Command):
             
         # Create a temporary directory for cloning PyTorch
         temp_dir = os.path.join(os.getcwd(), 'pytorch_temp')
-        if os.path.exists(temp_dir):
-            shutil.rmtree(temp_dir)
-        os.makedirs(temp_dir, exist_ok=True)
+        cwd = os.getcwd()
+        if not os.path.exists(temp_dir):
+            os.makedirs(temp_dir, exist_ok=True)
+            try:
+                # Clone the repository
+                subprocess.check_call(['git', 'clone', '--depth', '1', '--branch', 'convtranspose_mps_remove_check', 
+                                    'https://github.com/NMontanaBrown/pytorch.git', temp_dir])
+                
+                # Change to the repository directory
+            except Exception as e:
+                print(f"Failed to clone PyTorch: {e}")
+                raise
+            try:
+                cwd = os.getcwd()
+                os.chdir(temp_dir)
+                
+                # Update submodules
+                subprocess.check_call(['git', 'submodule', 'update', '--init', '--recursive'])
+            except Exception as e:
+                print(f"Failed to update submodules: {e}")
+                raise
         try:
-            # Clone the repository
-            subprocess.check_call(['git', 'clone', '--depth', '1', '--branch', 'convtranspose_mps_remove_check', 
-                                'https://github.com/NMontanaBrown/pytorch.git', temp_dir])
-            
-            # Change to the repository directory
-        except Exception as e:
-            print(f"Failed to clone PyTorch: {e}")
-            raise
-        try:
-            cwd = os.getcwd()
             os.chdir(temp_dir)
-            
-            # Update submodules
-            subprocess.check_call(['git', 'submodule', 'update', '--init', '--recursive'])
-
             # Install requirements and PyTorch
             subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', 'requirements.txt'])
+            subprocess.check_call(["chmod", "+x", "update_cmake_versions.sh"])
+            subprocess.check_call(["./update_cmake_versions.sh"])
             subprocess.check_call([sys.executable, 'setup.py', 'develop'])
-            
+        
             # Change back to the original directory
             os.chdir(cwd)
             print("Successfully installed custom PyTorch with MPS support!")
-            
+                
         except Exception as e:
             print(f"Failed to install custom PyTorch: {e}")
             raise
         finally:
             # Clean up if needed
             # Comment out if you want to keep the repository
-            import shutil
-            shutil.rmtree(temp_dir, ignore_errors=True)
+            # import shutil
+            # shutil.rmtree(temp_dir, ignore_errors=True)
             pass
 
 setup(name='nnunet',
