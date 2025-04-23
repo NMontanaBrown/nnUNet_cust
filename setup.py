@@ -1,4 +1,65 @@
-from setuptools import setup, find_namespace_packages
+import os
+import subprocess
+import sys
+from setuptools import setup, find_namespace_packages, Command
+
+class InstallCustomTorch(Command):
+    """Custom command to install PyTorch with MPS support from GitHub"""
+    description = 'Install custom PyTorch with MPS support'
+    user_options = []
+    
+    def initialize_options(self):
+        pass
+        
+    def finalize_options(self):
+        pass
+        
+    def run(self):
+        # Try to uninstall existing torch if present
+        try:
+            subprocess.check_call([sys.executable, '-m', 'pip', 'uninstall', '-y', 'torch'])
+            print("Uninstalled existing PyTorch")
+        except:
+            print("No existing PyTorch installation found")
+            
+        # Create a temporary directory for cloning PyTorch
+        temp_dir = os.path.join(os.getcwd(), 'pytorch_temp')
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
+        os.makedirs(temp_dir, exist_ok=True)
+        try:
+            # Clone the repository
+            subprocess.check_call(['git', 'clone', '--depth', '1', '--branch', 'convtranspose_mps_remove_check', 
+                                'https://github.com/NMontanaBrown/pytorch.git', temp_dir])
+            
+            # Change to the repository directory
+        except Exception as e:
+            print(f"Failed to clone PyTorch: {e}")
+            raise
+        try:
+            cwd = os.getcwd()
+            os.chdir(temp_dir)
+            
+            # Update submodules
+            subprocess.check_call(['git', 'submodule', 'update', '--init', '--recursive'])
+
+            # Install requirements and PyTorch
+            subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', 'requirements.txt'])
+            subprocess.check_call([sys.executable, 'setup.py', 'develop'])
+            
+            # Change back to the original directory
+            os.chdir(cwd)
+            print("Successfully installed custom PyTorch with MPS support!")
+            
+        except Exception as e:
+            print(f"Failed to install custom PyTorch: {e}")
+            raise
+        finally:
+            # Clean up if needed
+            # Comment out if you want to keep the repository
+            import shutil
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            pass
 
 setup(name='nnunet',
       packages=find_namespace_packages(include=["nnunet", "nnunet.*"]),
@@ -9,7 +70,6 @@ setup(name='nnunet',
       author_email='f.isensee@dkfz-heidelberg.de',
       license='Apache License Version 2.0, January 2004',
       install_requires=[
-            "torch>=1.6.0a",
             "tqdm",
             "dicom2nifti",
             "scikit-image>=0.14",
@@ -48,5 +108,8 @@ setup(name='nnunet',
           ],
       },
       keywords=['deep learning', 'image segmentation', 'medical image analysis',
-                'medical image segmentation', 'nnU-Net', 'nnunet']
+                'medical image segmentation', 'nnU-Net', 'nnunet'],
+      cmdclass={
+          'install_torch': InstallCustomTorch,
+      }
       )
