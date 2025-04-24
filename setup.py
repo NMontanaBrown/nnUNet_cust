@@ -1,6 +1,6 @@
 from setuptools import setup, find_namespace_packages
 
-setup(name='nnunet_customized',
+setup(name='nnunet',
       packages=find_namespace_packages(include=["nnunet", "nnunet.*"]),
     #   version='1.6.6',  # original nnunet version
       version='1.2',  # nnunet_customized version
