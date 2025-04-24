@@ -51,7 +51,11 @@ class InstallCustomTorch(Command):
             subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', 'requirements.txt'])
             subprocess.check_call(["chmod", "+x", "update_cmake_versions.sh"])
             subprocess.check_call(["./update_cmake_versions.sh"])
-            subprocess.check_call([sys.executable, 'setup.py', 'develop'])
+            env = os.environ.copy()
+            env["USE_MPS"] = "ON"
+            env["USE_PYTORCH_METAL"] = "ON"
+            env["USE_PYTORCH_METAL_EXPORT"] = "ON"
+            subprocess.check_call([sys.executable, 'setup.py', 'develop'], env=env)
         
             # Change back to the original directory
             os.chdir(cwd)
